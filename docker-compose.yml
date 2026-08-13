@@ -1,0 +1,109 @@
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: mysql
+
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "appuser",
+          "-papppassword"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
+  userservice:
+    build:
+      context: ./userservice
+
+    container_name: userservice
+
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/appdb
+      DB_USERNAME: appuser
+      DB_PASSWORD: apppassword
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8081:8081"
+
+
+  productservice:
+    build:
+      context: ./productservice
+
+    container_name: productservice
+
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/appdb
+      DB_USERNAME: appuser
+      DB_PASSWORD: apppassword
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8082:8082"
+
+
+  orderservice:
+    build:
+      context: ./orderservice
+
+    container_name: orderservice
+
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/appdb
+      DB_USERNAME: appuser
+      DB_PASSWORD: apppassword
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8083:8083"
+
+
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: frontend
+
+    depends_on:
+      - userservice
+      - productservice
+      - orderservice
+
+    ports:
+      - "80:80"
+
+
+volumes:
+  mysql-data:
